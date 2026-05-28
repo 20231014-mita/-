@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>ワホー！ほうほうタイピング ULTRA</title>
+<style>
+:root{
+  --bg:#07111f;--panel:rgba(15,23,42,.92);--panel2:rgba(30,41,59,.96);--line:rgba(255,255,255,.14);
+  --txt:#f8fafc;--muted:#a9b6ca;--main:#38bdf8;--good:#22c55e;--bad:#ef4444;--warn:#facc15;--violet:#a78bfa;--gold:#f59e0b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#020617;color:var(--txt);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body.theme-neon{background:radial-gradient(circle at 50% 0%,#17345e 0%,#07111f 42%,#020617 100%)}
+body.theme-sakura{background:radial-gradient(circle at 50% 0%,#7f1d5e 0%,#2a1028 44%,#09020b 100%)}
+body.theme-gold{background:radial-gradient(circle at 50% 0%,#74460b 0%,#221706 46%,#050300 100%)}
+body.theme-green{background:radial-gradient(circle at 50% 0%,#14532d 0%,#052e16 48%,#020617 100%)}
+button,input{font-family:inherit}
+button{user-select:none}
+#app{position:relative;width:100vw;height:100vh;overflow:hidden}
+.bgOrb{position:absolute;border-radius:999px;filter:blur(22px);opacity:.28;animation:float 8s ease-in-out infinite alternate;pointer-events:none}
+.bgOrb.o1{width:210px;height:210px;background:#38bdf8;left:-50px;top:8%}.bgOrb.o2{width:270px;height:270px;background:#a78bfa;right:-80px;bottom:9%;animation-delay:-2s}.bgOrb.o3{width:120px;height:120px;background:#22c55e;right:16%;top:14%;animation-delay:-5s}
+@keyframes float{to{transform:translateY(28px) scale(1.08)}}
+.screen{position:absolute;inset:0;display:none;padding:18px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-padding-top:18px}.screen.active{display:flex}#home,#result,#shop,#dex{align-items:flex-start;justify-content:center}.card{width:min(920px,100%);border:1px solid var(--line);border-radius:28px;background:linear-gradient(180deg,rgba(15,23,42,.94),rgba(2,6,23,.9));box-shadow:0 25px 80px rgba(0,0,0,.35);padding:24px;backdrop-filter:blur(12px)}
+
+/* Home scroll fix: tall home cards start at the top instead of being vertically clipped. */
+#home.screen.active{align-items:flex-start;justify-content:center;overflow-y:auto;overflow-x:hidden;padding-top:max(18px,env(safe-area-inset-top));padding-bottom:max(26px,env(safe-area-inset-bottom));}
+#home .card{margin:0 auto 22px;}
+.logo{font-size:clamp(34px,7.5vw,70px);font-weight:1000;letter-spacing:.03em;line-height:1;background:linear-gradient(90deg,#fff,#7dd3fc,#c4b5fd,#fff);-webkit-background-clip:text;background-clip:text;color:transparent;text-align:center;margin:4px 0 8px}.sub{text-align:center;color:var(--muted);font-weight:700;line-height:1.6;margin-bottom:18px}.homeStats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0 18px}.homeStat{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.06);padding:12px;text-align:center}.homeStat small{display:block;color:var(--muted);font-weight:900}.homeStat b{font-size:23px}
+.modeGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:18px 0}.mode{border:1px solid var(--line);border-radius:20px;padding:13px;background:rgba(255,255,255,.06);cursor:pointer;transition:.15s transform,.15s background}.mode:hover{transform:translateY(-2px);background:rgba(255,255,255,.1)}.mode.selected{outline:3px solid rgba(56,189,248,.35);background:rgba(56,189,248,.15)}.mode b{display:block;font-size:17px;margin-bottom:5px}.mode span{display:block;color:var(--muted);font-size:12px;line-height:1.45}.homeButtons{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}.btn{border:0;border-radius:18px;background:linear-gradient(135deg,#38bdf8,#6366f1);color:white;font-weight:1000;padding:15px 18px;cursor:pointer;box-shadow:0 16px 40px rgba(56,189,248,.2);font-size:16px}.btn:active{transform:scale(.98)}.btn.full{width:100%;font-size:20px;margin-top:4px}.btn.ghost{background:rgba(255,255,255,.08);box-shadow:none;border:1px solid var(--line);color:var(--txt)}.btn.warn{background:linear-gradient(135deg,#facc15,#f97316);box-shadow:0 16px 40px rgba(250,204,21,.16);color:#111827}.btn.bad{background:linear-gradient(135deg,#ef4444,#a855f7)}.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}.homeNote{font-size:13px;color:var(--muted);line-height:1.6;text-align:center;margin-top:12px}
+#game{flex-direction:column;gap:10px;overflow:hidden}.topbar{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;z-index:2}.stat{border:1px solid var(--line);border-radius:16px;background:rgba(15,23,42,.76);padding:8px 7px;text-align:center;backdrop-filter:blur(10px);min-width:0}.stat small{display:block;color:var(--muted);font-size:10px;font-weight:900;letter-spacing:.06em;white-space:nowrap}.stat b{font-size:clamp(16px,3vw,21px);line-height:1.1;white-space:nowrap}.barWrap{height:13px;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:rgba(255,255,255,.06);z-index:3}.bar{height:100%;width:100%;border-radius:999px;transition:width .15s linear}.timeBar{background:linear-gradient(90deg,#22c55e,#facc15,#ef4444)}.timeBar.noTime{background:linear-gradient(90deg,#38bdf8,#a78bfa);width:100%!important}.gaugeBar{background:linear-gradient(90deg,#38bdf8,#a78bfa,#facc15)}.barLabel{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px;font-weight:900;margin:-3px 2px 0}.mainArea{position:relative;flex:1;display:flex;align-items:center;justify-content:center;min-height:0}.playCard{width:min(900px,96%);border:1px solid var(--line);border-radius:30px;background:linear-gradient(180deg,rgba(15,23,42,.9),rgba(2,6,23,.82));box-shadow:0 22px 70px rgba(0,0,0,.35);padding:24px;text-align:center;backdrop-filter:blur(12px);position:relative;overflow:hidden}.playCard::before{content:"";position:absolute;inset:-80px;background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(56,189,248,.18),transparent 42%);pointer-events:none}.playCard.rare{border-color:rgba(250,204,21,.75);box-shadow:0 0 40px rgba(250,204,21,.22),0 22px 70px rgba(0,0,0,.35)}.playCard.boss{border-color:rgba(239,68,68,.85);box-shadow:0 0 46px rgba(239,68,68,.24),0 22px 70px rgba(0,0,0,.35)}.playCard.fever{animation:feverGlow .75s ease-in-out infinite alternate}@keyframes feverGlow{to{box-shadow:0 0 55px rgba(250,204,21,.36),0 22px 70px rgba(0,0,0,.35)}}.qLabel{position:relative;font-size:13px;color:var(--muted);font-weight:1000;letter-spacing:.1em;margin-bottom:8px}.tagLine{position:relative;min-height:28px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:4px}.tag{border:1px solid rgba(255,255,255,.15);border-radius:999px;background:rgba(255,255,255,.07);padding:5px 9px;font-size:12px;font-weight:1000;color:#e0f2fe}.tag.gold{background:rgba(250,204,21,.16);color:#fef3c7;border-color:rgba(250,204,21,.36)}.tag.red{background:rgba(239,68,68,.16);color:#fee2e2;border-color:rgba(239,68,68,.36)}.tag.feverTag{background:rgba(250,204,21,.22);color:#fff7ed;border-color:rgba(250,204,21,.55)}.question{position:relative;font-size:clamp(23px,5.2vw,42px);font-weight:1000;line-height:1.25;min-height:72px;display:flex;align-items:center;justify-content:center;margin:8px 0 6px}.hint{position:relative;font-size:clamp(18px,4.8vw,30px);color:#dbeafe;margin-top:8px;font-weight:1000;line-height:1.55;min-height:42px;letter-spacing:.08em}.smallHint{position:relative;color:var(--muted);font-weight:800;font-size:13px;margin-top:4px;min-height:20px}.inputRow{position:relative;display:grid;grid-template-columns:1fr auto;gap:10px;margin:18px auto 10px;width:min(650px,100%)}.answerInput{width:100%;border:2px solid rgba(255,255,255,.18);border-radius:20px;background:rgba(0,0,0,.25);color:#fff;font-size:clamp(24px,6vw,38px);font-weight:1000;padding:15px 18px;text-align:center;outline:none;letter-spacing:.06em;text-transform:uppercase;box-shadow:inset 0 0 30px rgba(0,0,0,.2)}.answerInput.skin-glass{background:rgba(255,255,255,.1)}.answerInput.skin-gold{border-color:rgba(250,204,21,.45);box-shadow:0 0 18px rgba(250,204,21,.14), inset 0 0 30px rgba(0,0,0,.2)}.answerInput.skin-rainbow{border-color:rgba(167,139,250,.65);box-shadow:0 0 22px rgba(167,139,250,.20), inset 0 0 30px rgba(0,0,0,.2)}.answerInput:focus{border-color:rgba(56,189,248,.9);box-shadow:0 0 0 5px rgba(56,189,248,.12), inset 0 0 30px rgba(0,0,0,.2)}.answerInput.ok{border-color:rgba(34,197,94,.95);background:rgba(34,197,94,.12)}.answerInput.partial{border-color:rgba(250,204,21,.95);background:rgba(250,204,21,.13)}.answerInput.ng{border-color:rgba(239,68,68,.95);background:rgba(239,68,68,.12);animation:shake .18s linear 2}@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}.feedback{position:relative;min-height:42px;font-size:clamp(18px,4.3vw,28px);font-weight:1000;color:#e0f2fe;margin-top:8px}.comboFlash{position:absolute;inset:auto 0 14px 0;margin:auto;width:max-content;max-width:92%;border:1px solid rgba(250,204,21,.35);border-radius:999px;background:rgba(250,204,21,.15);color:#fef9c3;font-weight:1000;font-size:clamp(18px,5vw,32px);padding:10px 18px;opacity:0;transform:translateY(10px) scale(.96);transition:.22s;pointer-events:none;z-index:4;box-shadow:0 16px 40px rgba(0,0,0,.25)}.comboFlash.show{opacity:1;transform:translateY(0) scale(1)}.answerGuide{position:relative;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:14px;color:var(--muted);font-size:13px;font-weight:800}.kanaChip{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:999px;padding:6px 9px}.bottomRow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;z-index:3}.resultGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:16px 0}.resultItem{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.06);padding:14px;text-align:center}.resultItem small{display:block;color:var(--muted);font-weight:800}.resultItem b{font-size:clamp(21px,3.8vw,29px)}.titleBox{border:1px solid rgba(56,189,248,.28);border-radius:20px;background:rgba(56,189,248,.1);padding:13px;text-align:center;font-weight:1000;font-size:22px;margin:12px 0;color:#e0f2fe}.review{max-height:190px;overflow:auto;border:1px solid var(--line);border-radius:18px;background:rgba(0,0,0,.18);padding:10px;margin:12px 0;text-align:left}.reviewLine{padding:8px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:800;color:#dbeafe;line-height:1.45}.reviewLine:last-child{border-bottom:0}.resultBtns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.gridList{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-height:55vh;overflow:auto;padding:4px}.tile{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.06);padding:12px}.tile.locked{opacity:.45}.tile b{font-size:19px}.tile small{display:block;color:var(--muted);font-weight:800;margin-top:4px}.shopTop{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.shopItems{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.shopItem{border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.06);padding:14px}.shopItem b{display:block;font-size:18px}.shopItem span{display:block;color:var(--muted);font-size:13px;margin:6px 0 10px;line-height:1.4}.missionBox{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.mission{border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.055);padding:9px;font-size:12px;font-weight:900;color:#dbeafe}.mission.done{border-color:rgba(34,197,94,.55);background:rgba(34,197,94,.14)}.particle{position:absolute;width:8px;height:8px;border-radius:50%;background:#fff;pointer-events:none;animation:fly .7s ease-out forwards;z-index:8}@keyframes fly{to{transform:translate(var(--x),var(--y)) scale(0);opacity:0}}.badge{position:absolute;left:10px;bottom:8px;color:rgba(255,255,255,.45);font-size:11px;font-weight:800;z-index:9}
+@media(max-width:840px){.screen{padding:12px}.card{padding:18px;border-radius:22px}.modeGrid{grid-template-columns:1fr}.homeStats{grid-template-columns:1fr 1fr}.homeButtons{grid-template-columns:1fr}.topbar{grid-template-columns:repeat(4,1fr)}.stat.hideSm{display:none}.playCard{padding:18px;border-radius:24px}.inputRow{grid-template-columns:1fr}.bottomRow{grid-template-columns:1fr 1fr}.resultGrid{grid-template-columns:1fr 1fr}.resultBtns{grid-template-columns:1fr}.question{min-height:88px}.answerGuide{display:none}.btn{padding:13px 12px;font-size:15px}.gridList,.shopItems,.missionBox{grid-template-columns:1fr}.shopTop{display:block}.shopTop .btn{margin-top:8px;width:100%}}
+
+
+/* ===== CLEAN UI V9：見やすさ優先の上書き ===== */
+:root{
+  --soft:rgba(255,255,255,.075);
+  --soft2:rgba(255,255,255,.115);
+  --shadow:0 22px 70px rgba(0,0,0,.34);
+}
+.screen{padding:clamp(10px,2.5vw,22px)}
+.card{max-width:980px;border-radius:26px;padding:clamp(18px,3vw,28px)}
+.sub{font-size:15px;line-height:1.7}
+.homeStats{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.homeStat{background:var(--soft);border-radius:20px;padding:14px 10px}
+.modeGrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.mode{min-height:92px;display:flex;flex-direction:column;justify-content:center;border-radius:22px;background:rgba(255,255,255,.065)}
+.mode.selected{background:linear-gradient(180deg,rgba(56,189,248,.22),rgba(99,102,241,.12));border-color:rgba(125,211,252,.5)}
+.homeButtons{grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px}.homeButtons .btn{min-height:58px}
+.missionBox{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.mission{font-size:13px;line-height:1.45;background:rgba(255,255,255,.065)}
+#game.screen.active{display:grid;grid-template-rows:auto auto auto 1fr auto;gap:10px;overflow:hidden;align-items:stretch}
+.topbar{width:min(1120px,100%);margin:0 auto;grid-template-columns:repeat(6,minmax(90px,1fr));gap:8px}.stat{border-radius:17px;padding:10px 7px;background:rgba(15,23,42,.82)}.stat small{font-size:10px}.stat b{font-size:clamp(16px,2.5vw,22px)}
+.barWrap,.barLabel{width:min(1120px,100%);margin-left:auto;margin-right:auto}.barWrap{height:14px}.barLabel{font-size:13px;margin-top:-4px}.mainArea{width:min(1120px,100%);margin:0 auto}.playCard{width:100%;max-width:980px;margin:0 auto;border-radius:30px;padding:clamp(18px,3vw,30px)}
+.qLabel{margin-bottom:8px}.tagLine{min-height:0;margin-bottom:8px}.question{min-height:0;padding:clamp(16px,3vw,26px);border:1px solid rgba(255,255,255,.12);border-radius:24px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 40px rgba(0,0,0,.12)}
+.hint{display:inline-flex;align-items:center;justify-content:center;min-width:min(460px,100%);min-height:48px;padding:8px 18px;border-radius:18px;background:rgba(56,189,248,.12);border:1px solid rgba(125,211,252,.28)}
+.smallHint{margin-top:8px}.inputRow{width:min(680px,100%);grid-template-columns:minmax(0,1fr) 132px;align-items:stretch}.answerInput{border-radius:22px;padding:16px 18px}.feedback{min-height:38px;margin-top:6px}.answerGuide{margin-top:10px}.bottomRow{width:min(1120px,100%);margin:0 auto;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px}.bottomRow .btn{min-height:50px}.resultGrid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}.resultBtns{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.gridList,.shopItems{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))}.tile,.shopItem{background:rgba(255,255,255,.065);border-radius:20px}.hintOff{display:none!important}
+@media(max-width:880px){
+  html,body{overflow:hidden}.screen{padding:10px}.card{border-radius:22px;padding:16px}.logo{font-size:clamp(32px,9vw,48px)}
+  #game.screen.active{gap:8px}.topbar{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.stat{padding:8px 5px}.stat.hideSm{display:none}.question{font-size:clamp(22px,6.3vw,34px);padding:16px 12px}.inputRow{grid-template-columns:1fr;gap:8px;margin-top:12px}.inputRow .btn{min-height:48px}.bottomRow{grid-template-columns:repeat(2,1fr);gap:8px}.answerGuide{display:none}.playCard{padding:16px;border-radius:24px}.hint{min-height:44px;font-size:clamp(18px,5.2vw,27px)}
+}
+@media(max-width:430px){
+  .topbar{grid-template-columns:repeat(2,minmax(0,1fr))}.stat b{font-size:17px}.bottomRow .btn{font-size:14px;padding:12px 6px}.homeStats{grid-template-columns:1fr 1fr}.mode{min-height:82px}.question{font-size:23px}.answerInput{font-size:28px}
+}
+
+</style>
+</head>
+<body class="theme-neon">
+<div id="app">
+  <div class="bgOrb o1"></div><div class="bgOrb o2"></div><div class="bgOrb o3"></div>
+
+  <div id="home" class="screen active">
+    <div class="card">
+      <div class="logo">ワホー！ULTRA</div>
+      <div class="sub">答えを<strong>カタカナ・漢字</strong>でタイピングする<br>ほうほうクイズ＋フィーバー＋図鑑ゲーム</div>
+      <div class="homeStats">
+        <div class="homeStat"><small>COINS</small><b id="homeCoins">0</b></div>
+        <div class="homeStat"><small>図鑑</small><b id="homeDex">0/28</b></div>
+        <div class="homeStat"><small>BEST</small><b id="homeBest">0</b></div>
+        <div class="homeStat"><small>今日</small><b id="todayStatus">未</b></div>
+      </div>
+      <div class="modeGrid">
+        <div class="mode selected" data-mode="easy"><b>かんたん</b><span>時間なし。ハート3個</span></div>
+        <div class="mode" data-mode="normal"><b>ふつう</b><span>90秒。基本モード</span></div>
+        <div class="mode" data-mode="hard"><b>むずかしい</b><span>60秒。意味だけ</span></div>
+        <div class="mode" data-mode="time"><b>タイムアタック</b><span>28問を何秒でクリア？</span></div>
+        <div class="mode" data-mode="survival"><b>サバイバル</b><span>ミスするまで続く</span></div>
+      </div>
+      <div class="missionBox" id="homeMissions"></div>
+      <div class="homeButtons">
+        <button class="btn full" id="startBtn">ゲームスタート</button>
+        <button class="btn full warn" id="dailyBtn">今日のワホー</button>
+        <button class="btn full ghost" id="shopBtn">ショップ</button>
+        <button class="btn full ghost" id="dexBtn">図鑑</button>
+      </div>
+      <div class="homeNote">漢字・ひらがな・「ー」抜けもOK。<br>例：<strong>魔法</strong> / <strong>マホウ</strong> / <strong>まほう</strong> で正解。</div>
+    </div>
+  </div>
+
+  <div id="game" class="screen">
+    <div class="topbar">
+      <div class="stat"><small>SCORE</small><b id="score">0</b></div>
+      <div class="stat"><small>RANK</small><b id="rank">C</b></div>
+      <div class="stat"><small>COMBO</small><b id="combo">0</b></div>
+      <div class="stat"><small>LIFE</small><b id="life">❤❤❤</b></div>
+      <div class="stat"><small>TIME</small><b id="time">∞</b></div>
+      <div class="stat"><small>Q</small><b id="qCount">1/28</b></div>
+      <div class="stat hideSm"><small>FEVER</small><b id="feverTime">OFF</b></div>
+      <div class="stat hideSm"><small>PARTIAL</small><b id="partialCount">0</b></div>
+    </div>
+    <div class="barWrap"><div class="bar timeBar noTime" id="timeBar"></div></div>
+    <div class="barLabel"><span>ワホーゲージ</span><span id="gaugeText">0%</span></div>
+    <div class="barWrap"><div class="bar gaugeBar" id="gaugeBar" style="width:0%"></div></div>
+    <div class="mainArea" id="mainArea">
+      <div class="playCard" id="playCard">
+        <div class="qLabel" id="modeLabel">QUESTION</div>
+        <div class="tagLine" id="tagLine"></div>
+        <div class="question" id="question">セイキンといえば？</div>
+        <div class="hint" id="hint">ヨ□□</div>
+        <div class="smallHint" id="smallHint">かんたんモードだけヒントを使えます</div>
+        <div class="inputRow">
+          <input id="answerInput" class="answerInput" type="text" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="カタカナ・漢字で入力" />
+          <button class="btn" id="submitBtn">回答</button>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="comboFlash" id="comboFlash">2コンボ！</div>
+        <div class="answerGuide">
+          <span class="kanaChip">ゲージ満タンでフィーバー</span>
+          <span class="kanaChip">レア・ボス問題は高得点</span>
+          <span class="kanaChip">漢字・ひらがなもOK</span>
+        </div>
+      </div>
+    </div>
+    <div class="bottomRow">
+      <button class="btn ghost" id="hintBtn">ヒント</button>
+      <button class="btn ghost" id="skipBtn">パス</button>
+      <button class="btn ghost" id="pauseBtn">一時停止</button>
+      <button class="btn ghost" id="homeBtn">ホームへ</button>
+    </div>
+  </div>
+
+  <div id="result" class="screen">
+    <div class="card">
+      <div class="logo">結果発表</div>
+      <div class="titleBox" id="titleBox">ランクC</div>
+      <div class="resultGrid">
+        <div class="resultItem"><small>SCORE</small><b id="rScore">0</b></div>
+        <div class="resultItem"><small>正解</small><b id="rCorrect">0</b></div>
+        <div class="resultItem"><small>部分点</small><b id="rPartial">0</b></div>
+        <div class="resultItem"><small>最大コンボ</small><b id="rCombo">0</b></div>
+        <div class="resultItem"><small>COIN</small><b id="rCoins">0</b></div>
+      </div>
+      <div class="sub" id="rankText">ワホー級！</div>
+      <div class="missionBox" id="resultMissions"></div>
+      <div class="review" id="review"></div>
+      <div class="resultBtns">
+        <button class="btn warn" id="reviewWrongBtn">苦手問題だけ復習</button>
+        <button class="btn" id="retryBtn">もう一回</button>
+        <button class="btn ghost" id="backBtn">ホームへ戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="shop" class="screen">
+    <div class="card">
+      <div class="shopTop"><div><div class="logo" style="font-size:46px;text-align:left">ショップ</div><div class="sub" style="text-align:left;margin:0">見た目だけを変えられます。ゲームの強さは変わりません。</div></div><button class="btn ghost" id="shopBackBtn">戻る</button></div>
+      <div class="homeStat" style="margin-bottom:12px"><small>COINS</small><b id="shopCoins">0</b></div>
+      <div class="shopItems" id="shopItems"></div>
+    </div>
+  </div>
+
+  <div id="dex" class="screen">
+    <div class="card">
+      <div class="shopTop"><div><div class="logo" style="font-size:46px;text-align:left">ワホー図鑑</div><div class="sub" style="text-align:left;margin:0">正解した言葉が登録されます。</div></div><button class="btn ghost" id="dexBackBtn">戻る</button></div>
+      <div class="gridList" id="dexList"></div>
+    </div>
+  </div>
+
+  <div class="badge">WAHOO ULTRA V9 CLEAN UI</div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const DATA = [
+    { clue:'セイキンといえば？', hardClue:'有名な「ワホー」というネタの答え', kanji:'ワホー', kanjiAliases:['ワホウ'], kana:['ワホー','ワホウ'] },
+    { clue:'どうしようもないバカのこと', hardClue:'愚かな人を表す昔からある言葉', kanji:'阿呆', kanjiAliases:['阿ほう','阿ホー','アホー','アホ'], kana:['アホー','アホウ'] },
+    { clue:'ドラッグは？', hardClue:'法律に反していること', kanji:'違法', kana:['イホウ'] },
+    { clue:'2月に食べる巻き寿司', hardClue:'節分で向く方角にも関係する言葉', kanji:'恵方', kana:['エホウ'] },
+    { clue:'先祖代々伝わる宝物', hardClue:'家に代々伝わる大切な宝', kanji:'家宝', kana:['カホウ'] },
+    { clue:'プレパラートに入った泡', hardClue:'水や液体の中の小さな空気の泡', kanji:'気泡', kana:['キホウ'] },
+    { clue:'ダースベイダーの呼吸音といえば？', hardClue:'低い呼吸音のものまね', kanji:'コーホー', kana:['コーホー','コーホウ'] },
+    { clue:'お茶を立てる時のマナー', hardClue:'礼儀や動きの決まったやり方', kanji:'作法', kana:['サホウ'] },
+    { clue:'裁判所に関係するしくみ', hardClue:'裁判で法律を使う国家の働き', kanji:'司法', kana:['シホウ'] },
+    { clue:'日本のエリア分けの代表的なやり方', hardClue:'関東・関西・東北などの区分', kanji:'地方', kana:['チホウ'] },
+    { clue:'何もできずに立ち尽くす', hardClue:'どうすればよいか分からない状態', kanji:'途方', kana:['トホウ'] },
+    { clue:'悲しいニュース', hardClue:'悪い知らせや残念な知らせ', kanji:'悲報', kana:['ヒホウ'] },
+    { clue:'お悔やみ申し上げます', hardClue:'人が亡くなった知らせ', kanji:'訃報', kana:['フホウ'] },
+    { clue:'ハリーポッターといえば', hardClue:'不思議な力で物事を起こす力', kanji:'魔法', kana:['マホウ'] },
+    { clue:'ルールがなく、犯罪が多い状態', hardClue:'法律や秩序がない状態', kanji:'無法', kana:['ムホウ'] },
+    { clue:'便利な方法を真似ること', hardClue:'他のものをまねること', kanji:'模倣', kana:['モホウ'] },
+    { clue:'いい絵の描き方', hardClue:'絵を描くための技法', kanji:'画法', kana:['ガホウ'] },
+    { clue:'ニュースに間違いがございました', hardClue:'まちがった知らせ', kanji:'誤報', kana:['ゴホウ'] },
+    { clue:'ただいま2時になりました', hardClue:'決まった時刻を知らせる合図', kanji:'時報', kana:['ジホウ'] },
+    { clue:'天気を前もって知らせること', hardClue:'未来の天気などを知らせること', kanji:'予報', kana:['ヨホウ'] },
+    { clue:'新しいニュースやデータ', hardClue:'知らせやデータのこと', kanji:'情報', kana:['ジョウホウ'] },
+    { clue:'いち早く知らせるニュース', hardClue:'とても早く出される知らせ', kanji:'速報', kana:['ソクホウ'] },
+    { clue:'うれしい知らせ', hardClue:'よい知らせ', kanji:'朗報', kana:['ロウホウ'] },
+    { clue:'国や市が出す知らせ', hardClue:'役所や団体が広く知らせること', kanji:'広報', kana:['コウホウ'] },
+    { clue:'やり方のこと', hardClue:'目的を達成するためのやり方', kanji:'方法', kana:['ホウホウ'] },
+    { clue:'国を守る法律の大もと', hardClue:'国のルールの一番大事な法律', kanji:'憲法', kana:['ケンポウ'] },
+    { clue:'大砲を撃つ武器', hardClue:'弾を撃つ大きな武器', kanji:'砲', kana:['ホウ'] },
+    { clue:'警察に知らせること', hardClue:'事件などを関係機関に知らせること', kanji:'通報', kana:['ツウホウ'] }
+  ];
+
+  const DAILY = [
+    { clue:'今日の特別問題：未来の天気を知らせること', hardClue:'未来の天気を知らせること', kanji:'予報', kana:['ヨホウ'] },
+    { clue:'今日の特別問題：法律の大もと', hardClue:'国のルールの一番大事な法律', kanji:'憲法', kana:['ケンポウ'] },
+    { clue:'今日の特別問題：いち早いニュース', hardClue:'とても早く出される知らせ', kanji:'速報', kana:['ソクホウ'] },
+    { clue:'今日の特別問題：よい知らせ', hardClue:'うれしい知らせ', kanji:'朗報', kana:['ロウホウ'] }
+  ];
+
+  const SHOP = [
+    { id:'theme-neon', type:'theme', name:'ネオン背景', desc:'青い基本背景', cost:0 },
+    { id:'theme-sakura', type:'theme', name:'サクラ背景', desc:'ピンク系の背景', cost:120 },
+    { id:'theme-gold', type:'theme', name:'ゴールド背景', desc:'金色の背景', cost:250 },
+    { id:'theme-green', type:'theme', name:'グリーン背景', desc:'落ち着いた緑背景', cost:180 },
+    { id:'skin-normal', type:'input', name:'通常入力欄', desc:'基本の入力欄', cost:0 },
+    { id:'skin-glass', type:'input', name:'ガラス入力欄', desc:'透明感のある入力欄', cost:100 },
+    { id:'skin-gold', type:'input', name:'金色入力欄', desc:'レア感のある入力欄', cost:220 },
+    { id:'skin-rainbow', type:'input', name:'虹色入力欄', desc:'フィーバー感のある入力欄', cost:350 }
+  ];
+
+  const $ = id => document.getElementById(id);
+  const screens = { home:$('home'), game:$('game'), result:$('result'), shop:$('shop'), dex:$('dex') };
+  const el = {
+    question:$('question'), hint:$('hint'), smallHint:$('smallHint'), input:$('answerInput'), feedback:$('feedback'),
+    score:$('score'), combo:$('combo'), time:$('time'), qCount:$('qCount'), partialCount:$('partialCount'), rank:$('rank'), life:$('life'), feverTime:$('feverTime'),
+    timeBar:$('timeBar'), gaugeBar:$('gaugeBar'), gaugeText:$('gaugeText'), playCard:$('playCard'), comboFlash:$('comboFlash'), hintBtn:$('hintBtn'), tagLine:$('tagLine')
+  };
+
+  const state = {
+    mode:'easy', deck:[], index:0, score:0, combo:0, maxCombo:0, correct:0, partial:0, wrong:0,
+    totalTime:0, timeLeft:0, elapsed:0, timer:null, paused:false, locked:false, review:[], current:null,
+    hintLevel:0, hintsUsed:0, noHintCorrect:0, wrongDeck:[], reviewMode:false, dailyMode:false,
+    life:3, gauge:0, feverLeft:0, feverActive:false, isRare:false, isBoss:false, survivalCount:0, gameFinished:false
+  };
+
+  const save = loadSave();
+
+  function loadSave(){
+    const defaults = { coins:0, best:0, dex:{}, owned:{'theme-neon':true,'skin-normal':true}, equippedTheme:'theme-neon', equippedInput:'skin-normal', dailyDate:'', missions:{} };
+    try{
+      return Object.assign(defaults, JSON.parse(localStorage.getItem('wahooUltraSave') || '{}'));
+    }catch(e){ return defaults; }
+  }
+  function persist(){ localStorage.setItem('wahooUltraSave', JSON.stringify(save)); }
+  function todayKey(){ const d=new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+
+  function show(name){ Object.values(screens).forEach(s => s.classList.remove('active')); screens[name].classList.add('active'); screens[name].scrollTop = 0; if(name === 'home'){ updateHome(); requestAnimationFrame(()=>{ screens.home.scrollTop = 0; }); } }
+  function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+  function normalizeKana(text){ return String(text||'').normalize('NFKC').replace(/[\s\u3000]/g,'').replace(/[ｰ―‐－–—]/g,'ー').replace(/[ぁ-ゖ]/g,ch=>String.fromCharCode(ch.charCodeAt(0)+0x60)).toUpperCase(); }
+  function compactAnswer(text){ return normalizeKana(text).replace(/ー/g,'').replace(/ウ/g,'').replace(/[・.。!！?？]/g,''); }
+  function answerVariants(text){ const base=normalizeKana(text); const set=new Set([base]); if(!base) return set; set.add(base.replace(/ー/g,'')); set.add(base.replace(/ホウ/g,'ホー')); set.add(base.replace(/オウ/g,'オー')); set.add(base.replace(/ョウ/g,'ョー')); return set; }
+  function getCorrectVariants(item){ const s=new Set(); item.kana.forEach(a=>answerVariants(a).forEach(v=>s.add(v))); return s; }
+  function isCorrectAnswer(typed,item){ const raw=String(typed||'').normalize('NFKC').replace(/[\s\u3000]/g,''); if(!raw) return false; const kanji=new Set([item.kanji,...(item.kanjiAliases||[])].filter(Boolean)); if(kanji.has(raw)) return true; const tv=answerVariants(raw); const cv=getCorrectVariants(item); for(const v of tv){ if(cv.has(v)) return true; } return false; }
+  function similarity(a,b){ a=compactAnswer(a); b=compactAnswer(b); if(!a||!b) return 0; const m=a.length,n=b.length; const dp=Array.from({length:m+1},()=>Array(n+1).fill(0)); for(let i=0;i<=m;i++) dp[i][0]=i; for(let j=0;j<=n;j++) dp[0][j]=j; for(let i=1;i<=m;i++){ for(let j=1;j<=n;j++){ const cost=a[i-1]===b[j-1]?0:1; dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+cost); } } return 1-dp[m][n]/Math.max(m,n); }
+  function partialScore(typed,item){ if(!typed) return 0; const raw=String(typed||'').normalize('NFKC').replace(/[\s\u3000]/g,''); if(raw===item.kanji||(item.kanjiAliases||[]).includes(raw)) return 0; const typedKana=normalizeKana(typed); let best=0; for(const ans of item.kana){ const correct=normalizeKana(ans); const c1=compactAnswer(correct); const t1=compactAnswer(typedKana); if(t1.length>=2&&(c1.startsWith(t1)||t1.startsWith(c1))) best=Math.max(best,.72); best=Math.max(best,similarity(typedKana,correct)); } if(best>=.74) return 70; if(best>=.58) return 45; if(best>=.42) return 25; return 0; }
+
+  function visibleHint(item){ const ans=normalizeKana(item.kana[0]); const chars=Array.from(ans); const open=Math.min(chars.length,state.hintLevel); return chars.map((ch,i)=> i<open || ch==='ー' ? ch : '□').join(''); }
+  function hintAvailable(){ return state.mode==='easy' && !state.dailyMode && !state.reviewMode; }
+  function syncHintVisibility(){ const ok=hintAvailable(); el.hint.classList.toggle('hintOff', !ok); el.smallHint.classList.toggle('hintOff', !ok); el.hintBtn.classList.toggle('hintOff', !ok); el.hintBtn.disabled=!ok; if(!ok){ el.hint.textContent=''; el.smallHint.textContent=''; state.hintLevel=0; state.hintsUsed=0; } }
+  function rankName(score=state.score){ if(score>=3600) return 'ワホー神'; if(score>=2600) return 'S'; if(score>=1700) return 'A'; if(score>=850) return 'B'; return 'C'; }
+  function titleName(){ if(state.correct>=DATA.length && !state.reviewMode && !state.dailyMode) return 'ほうほう博士'; if(state.correct>=20) return 'ワホーマスター'; if(state.correct>=5) return 'ワホー初心者'; return 'ワホー新人'; }
+  function setMode(mode){ state.mode=mode; document.querySelectorAll('.mode').forEach(m=>m.classList.toggle('selected',m.dataset.mode===mode)); }
+
+  function applyCosmetics(){
+    document.body.className = save.equippedTheme || 'theme-neon';
+    el.input.classList.remove('skin-glass','skin-gold','skin-rainbow');
+    if(save.equippedInput && save.equippedInput !== 'skin-normal') el.input.classList.add(save.equippedInput);
+  }
+
+  function updateHome(){
+    applyCosmetics();
+    $('homeCoins').textContent = save.coins || 0;
+    $('homeDex').textContent = `${Object.keys(save.dex||{}).length}/${DATA.length}`;
+    $('homeBest').textContent = save.best || 0;
+    $('todayStatus').textContent = save.dailyDate === todayKey() ? '済' : '未';
+    $('dailyBtn').disabled = save.dailyDate === todayKey();
+    renderMissions('homeMissions');
+  }
+
+  function startGame(deck=null, reviewMode=false, dailyMode=false){
+    const source = deck && deck.length ? deck : dailyMode ? [dailyQuestion()] : DATA;
+    state.deck = state.mode === 'survival' && !dailyMode && !reviewMode ? shuffle(source) : shuffle(source);
+    state.index=0; state.score=0; state.combo=0; state.maxCombo=0; state.correct=0; state.partial=0; state.wrong=0;
+    state.review=[]; state.wrongDeck=[]; state.reviewMode=reviewMode; state.dailyMode=dailyMode; state.elapsed=0;
+    state.totalTime = dailyMode || reviewMode || state.mode==='easy' || state.mode==='time' || state.mode==='survival' ? 0 : state.mode==='hard' ? 60 : 90;
+    state.timeLeft=state.totalTime; state.paused=false; state.locked=false; state.life = state.mode==='survival' ? 1 : 3; state.gauge=0; state.feverLeft=0; state.feverActive=false; state.survivalCount=0; state.gameFinished=false;
+    $('pauseBtn').textContent='一時停止';
+    $('modeLabel').textContent = dailyMode ? 'TODAY WAHOO' : reviewMode ? 'WEAK REVIEW' : state.mode==='hard' ? 'HARD QUESTION' : state.mode==='time' ? 'TIME ATTACK' : state.mode==='survival' ? 'SURVIVAL' : 'QUESTION';
+    el.timeBar.classList.toggle('noTime', state.totalTime===0);
+    show('game'); nextQuestion(); clearInterval(state.timer); state.timer=setInterval(tick,100); playSound('start');
+  }
+
+  function dailyQuestion(){ const d=new Date(); const i=(d.getFullYear()+d.getMonth()+d.getDate())%DAILY.length; return Object.assign({},DAILY[i],{daily:true}); }
+
+  function tick(){
+    if(state.paused || state.gameFinished) return;
+    state.elapsed += 0.1;
+    if(state.totalTime>0){
+      state.timeLeft -= 0.1;
+      if(state.timeLeft<=0){ state.timeLeft=0; updateHud(); finishGame('timeup'); return; }
+    }
+    if(state.feverActive){
+      state.feverLeft -= 0.1;
+      if(state.feverLeft<=0){ state.feverLeft=0; state.feverActive=false; el.playCard.classList.remove('fever'); }
+    }
+    updateHud();
+  }
+
+  function updateHud(){
+    el.score.textContent=state.score; el.combo.textContent=state.combo; el.rank.textContent=rankName(); el.life.textContent='❤'.repeat(Math.max(0,state.life)) || '0';
+    el.time.textContent = state.mode==='time' || state.mode==='survival' ? Math.floor(state.elapsed)+'s' : state.totalTime===0 ? '∞' : Math.ceil(state.timeLeft);
+    const qNow = state.mode==='survival' ? state.survivalCount+1 : Math.min(state.index+1,state.deck.length);
+    el.qCount.textContent = state.mode==='survival' ? `${qNow}` : `${qNow}/${state.deck.length}`;
+    el.partialCount.textContent=state.partial; el.feverTime.textContent=state.feverActive ? `${Math.ceil(state.feverLeft)}s` : 'OFF';
+    if(state.totalTime===0){ el.timeBar.style.width='100%'; } else { el.timeBar.style.width=`${Math.max(0,(state.timeLeft/state.totalTime)*100)}%`; }
+    el.gaugeBar.style.width=`${Math.min(100,state.gauge)}%`; el.gaugeText.textContent=`${Math.floor(Math.min(100,state.gauge))}%`;
+  }
+
+  function nextQuestion(){
+    state.locked=false; state.hintLevel = hintAvailable() ? 1 : 0; state.hintsUsed=0;
+    el.input.disabled=false; el.input.value=''; el.input.classList.remove('ok','ng','partial'); el.feedback.textContent=''; el.playCard.classList.remove('rare','boss'); el.tagLine.innerHTML='';
+    if(state.index>=state.deck.length){
+      if(state.mode==='survival' && !state.dailyMode && !state.reviewMode){ state.deck = shuffle(DATA); state.index=0; }
+      else { finishGame('clear'); return; }
+    }
+    const item=state.deck[state.index]; state.current=item;
+    state.isBoss = !state.dailyMode && !state.reviewMode && state.mode!=='survival' && (state.index+1)%5===0;
+    state.isRare = !state.dailyMode && !state.reviewMode && Math.random()<0.16;
+    if(state.isBoss) el.playCard.classList.add('boss');
+    if(state.isRare) el.playCard.classList.add('rare');
+    renderTags();
+    el.question.textContent = (state.mode==='hard'||state.isBoss) && !state.reviewMode ? item.hardClue : item.clue;
+    if(hintAvailable()){
+      el.hint.textContent = visibleHint(item);
+      el.smallHint.textContent = state.hintLevel ? '最初の1文字ヒント表示中' : 'ヒントボタンで1文字ずつ表示できます';
+    }
+    syncHintVisibility(); updateHud(); setTimeout(()=>el.input.focus(),60);
+  }
+
+  function renderTags(){
+    const tags=[];
+    if(state.isRare) tags.push(['レア問題 ×3','gold']);
+    if(state.isBoss) tags.push(['ボス問題 大量ポイント','red']);
+    if(state.feverActive) tags.push(['ワホーフィーバー ×2','feverTag']);
+    if(state.mode==='survival') tags.push(['ミスで終了','red']);
+    el.tagLine.innerHTML = tags.map(t=>`<span class="tag ${t[1]}">${t[0]}</span>`).join('');
+  }
+
+  function useHint(){
+    if(state.locked||state.paused||!state.current||!hintAvailable()) return;
+    const len=Array.from(normalizeKana(state.current.kana[0])).filter(c=>c!=='ー').length;
+    state.hintLevel=Math.min(len,state.hintLevel+1); state.hintsUsed++;
+    el.hint.textContent=visibleHint(state.current); el.smallHint.textContent = state.hintLevel>=len ? '全部見えています。落ち着いて入力！' : 'ヒントを使うと少しだけ点数が下がります';
+    state.score=Math.max(0,state.score-10); updateHud(); if(state.hintLevel>=len) el.hintBtn.disabled=true; playSound('hint');
+  }
+
+  function submitAnswer(skip=false){
+    if(state.locked||state.paused||state.gameFinished) return;
+    const item=state.current; const typedRaw=el.input.value; const typed=normalizeKana(typedRaw);
+    if(!skip&&!typed){ el.input.classList.add('ng'); el.feedback.textContent='カタカナか漢字で入力してね！'; setTimeout(()=>el.input.classList.remove('ng'),360); return; }
+    state.locked=true; el.input.disabled=true; el.hintBtn.disabled=true;
+    const ok=!skip&&isCorrectAnswer(typedRaw,item); const pScore=ok||skip?0:partialScore(typedRaw,item); const correctText=item.kana[0];
+    if(ok){ handleCorrect(item); }
+    else if(pScore>0){ handlePartial(item,pScore,typedRaw); }
+    else { handleWrong(item,typedRaw,skip); }
+    state.review.push({clue:item.clue,kanji:item.kanji,answer:correctText,chosen:skip?'パス':(typed||'未入力'),ok,partial:pScore,rare:state.isRare,boss:state.isBoss});
+    if(state.mode==='survival') state.survivalCount = state.correct;
+    state.index++; updateHud();
+    const delay = ok ? 720 : pScore>0 ? 1050 : 1150;
+    if(state.life<=0 || (state.mode==='survival' && !ok && pScore<=0)){ setTimeout(()=>finishGame('life'),700); }
+    else setTimeout(nextQuestion,delay);
+  }
+
+  function handleCorrect(item){
+    state.combo++; state.maxCombo=Math.max(state.maxCombo,state.combo); state.correct++; if(state.hintsUsed===0) state.noHintCorrect++;
+    let add=100 + Math.floor(state.combo*16);
+    if(state.mode==='hard'&&!state.reviewMode) add+=40; if(state.isBoss) add+=250; if(state.isRare) add*=3; if(state.feverActive) add*=2; if(state.dailyMode) add+=500;
+    add=Math.max(40, add - state.hintLevel*8); state.score+=add; state.gauge += state.isBoss ? 40 : state.isRare ? 35 : 22;
+    if(state.gauge>=100) triggerFever();
+    save.dex[item.kanji]=true;
+    el.input.classList.add('ok'); el.feedback.textContent = state.feverActive ? `ワホー！正解！ +${add} ×2中` : `ワホー！正解！ +${add}`;
+    if(state.combo>=2) showComboFlash(`${state.combo}コンボ！ ほうほう！`);
+    if(state.combo>=5) completeMission('combo5');
+    if(state.noHintCorrect>=10) completeMission('noHint10');
+    popParticles('good', state.combo); playSound('correct'); renderTags();
+    if(state.totalTime>0 && state.combo%5===0) state.timeLeft=Math.min(state.totalTime,state.timeLeft+3);
+  }
+
+  function handlePartial(item,pScore,typedRaw){
+    state.partial++; state.combo=0; state.score+=pScore; state.wrongDeck.push(item);
+    el.input.classList.add('partial'); el.feedback.textContent=`おしい！部分点 +${pScore} / 正解：${item.kana[0]}`;
+    popParticles('partial',1); playSound('partial');
+  }
+
+  function handleWrong(item,typedRaw,skip){
+    state.wrong++; state.combo=0; state.life--; state.gauge=Math.max(0,state.gauge-12); state.wrongDeck.push(item);
+    el.input.classList.add('ng'); el.feedback.textContent=`あれ？ 正解：${item.kana[0]}（${item.kanji}）`;
+    popParticles('bad',1); playSound('wrong');
+  }
+
+  function triggerFever(){
+    state.gauge=0; state.feverActive=true; state.feverLeft=10; el.playCard.classList.add('fever'); showComboFlash('ワホーフィーバー！10秒スコア2倍！'); playSound('fever');
+  }
+
+  function finishGame(reason='end'){
+    if(state.gameFinished) return; state.gameFinished=true; clearInterval(state.timer); state.timer=null; el.input.blur();
+    if(state.dailyMode && state.correct>0) save.dailyDate=todayKey();
+    if(state.correct>=15 && state.elapsed<=60) completeMission('fast15');
+    const earned = Math.max(0, Math.floor(state.score/18) + state.correct*2 + (state.dailyMode&&state.correct?80:0));
+    save.coins=(save.coins||0)+earned; save.best=Math.max(save.best||0,state.score); persist();
+    $('rScore').textContent=state.score; $('rCorrect').textContent=`${state.correct}/${state.correct+state.partial+state.wrong}`; $('rPartial').textContent=state.partial; $('rCombo').textContent=state.maxCombo; $('rCoins').textContent=`+${earned}`;
+    const rank=rankName(); $('titleBox').textContent=`ランク：${rank}　称号：${titleName()}`;
+    let text = rank==='ワホー神' ? '最強！ワホー神レベル！' : rank==='S' ? 'Sランク！かなり強い！' : rank==='A' ? 'Aランク！いい感じ！' : rank==='B' ? 'Bランク！コンボを伸ばそう！' : 'Cランク！まずはヒントで覚えよう！';
+    if(reason==='life') text='ライフがなくなりました。苦手問題を復習しよう！';
+    if(state.mode==='time' && reason==='clear') text=`タイムアタック完走：${Math.floor(state.elapsed)}秒！`;
+    if(state.mode==='survival') text=`サバイバル記録：${state.correct}問連続！`;
+    $('rankText').textContent=text; renderMissions('resultMissions'); renderReview(); $('reviewWrongBtn').disabled=state.wrongDeck.length===0; show('result'); updateHome();
+  }
+
+  function completeMission(id){ save.missions=save.missions||{}; if(!save.missions[id]){ save.missions[id]=true; save.coins=(save.coins||0)+60; persist(); } }
+  function renderMissions(targetId){
+    const missions=[['combo5','5コンボ達成'],['noHint10','ヒントなし10問正解'],['fast15','60秒以内に15問正解']];
+    $(targetId).innerHTML=missions.map(m=>`<div class="mission ${save.missions&&save.missions[m[0]]?'done':''}">${save.missions&&save.missions[m[0]]?'達成':'未達成'}：${m[1]}</div>`).join('');
+  }
+  function renderReview(){
+    const r=$('review'); r.innerHTML=''; const lines=state.review.length?state.review.slice(-18):[{clue:'まだ記録がありません',answer:'',kanji:'',chosen:'',ok:false,partial:0}];
+    lines.forEach(x=>{ const line=document.createElement('div'); line.className='reviewLine'; const mark=x.ok?'○':x.partial?'△':'×'; const extra=(x.rare?'【レア】':'')+(x.boss?'【ボス】':''); line.textContent=`${mark}${extra} ${x.clue} → ${x.answer}${x.kanji?'（'+x.kanji+'）':''} / 入力：${x.chosen}`; r.appendChild(line); });
+  }
+
+  function renderDex(){
+    const list=$('dexList'); list.innerHTML='';
+    DATA.forEach((item,i)=>{ const unlocked=!!(save.dex&&save.dex[item.kanji]); const d=document.createElement('div'); d.className='tile'+(unlocked?'':' locked'); d.innerHTML=unlocked?`<b>${item.kanji}</b><small>${item.kana[0]}</small><small>${item.clue}</small>`:`<b>？？？</b><small>${i+1}番の言葉</small><small>正解すると登録</small>`; list.appendChild(d); });
+  }
+
+  function renderShop(){
+    $('shopCoins').textContent=save.coins||0; const box=$('shopItems'); box.innerHTML='';
+    SHOP.forEach(item=>{ const owned=!!save.owned[item.id]; const equipped=(item.type==='theme'&&save.equippedTheme===item.id)||(item.type==='input'&&save.equippedInput===item.id); const b=document.createElement('div'); b.className='shopItem'; b.innerHTML=`<b>${item.name}</b><span>${item.desc}</span><button class="btn ${equipped?'warn':owned?'ghost':''}" data-id="${item.id}">${equipped?'装備中':owned?'装備する':item.cost+'コインで購入'}</button>`; box.appendChild(b); });
+    box.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>buyOrEquip(btn.dataset.id)));
+  }
+  function buyOrEquip(id){
+    const item=SHOP.find(x=>x.id===id); if(!item) return;
+    if(!save.owned[id]){ if((save.coins||0)<item.cost){ alert('コインが足りません'); return; } save.coins-=item.cost; save.owned[id]=true; }
+    if(item.type==='theme') save.equippedTheme=id; if(item.type==='input') save.equippedInput=id; persist(); applyCosmetics(); renderShop(); updateHome();
+  }
+
+  function showComboFlash(text){ el.comboFlash.textContent=text; el.comboFlash.classList.add('show'); setTimeout(()=>el.comboFlash.classList.remove('show'),800); }
+  function popParticles(kind='good',combo=1){
+    const rect=el.playCard.getBoundingClientRect(); const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+    const count=Math.min(70, 18 + combo*5 + (state.feverActive?18:0));
+    for(let i=0;i<count;i++){ const p=document.createElement('div'); p.className='particle'; p.style.left=cx+'px'; p.style.top=cy+'px'; p.style.background = kind==='good' ? (state.feverActive?(i%3?'#facc15':'#a78bfa'):(i%2?'#22c55e':'#7dd3fc')) : kind==='partial' ? (i%2?'#facc15':'#fb923c') : (i%2?'#ef4444':'#facc15'); const ang=Math.random()*Math.PI*2; const dist=55+Math.random()*(105+combo*4); p.style.setProperty('--x',Math.cos(ang)*dist+'px'); p.style.setProperty('--y',Math.sin(ang)*dist+'px'); document.body.appendChild(p); setTimeout(()=>p.remove(),760); }
+  }
+  function playSound(type){
+    try{
+      const AudioCtx=window.AudioContext||window.webkitAudioContext; if(!AudioCtx) return; window.wahooAudio=window.wahooAudio||new AudioCtx(); const ctx=window.wahooAudio; const now=ctx.currentTime;
+      const osc=ctx.createOscillator(); const gain=ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.type= type==='wrong'?'sawtooth':'sine';
+      const freq={correct:740,partial:520,wrong:170,hint:420,fever:920,start:620}[type]||500; osc.frequency.setValueAtTime(freq,now); if(type==='fever') osc.frequency.exponentialRampToValueAtTime(1320,now+.18); else osc.frequency.exponentialRampToValueAtTime(Math.max(80,freq*.55),now+.12);
+      gain.gain.setValueAtTime(.001,now); gain.gain.exponentialRampToValueAtTime(.12,now+.02); gain.gain.exponentialRampToValueAtTime(.001,now+(type==='fever'?.32:.14)); osc.start(now); osc.stop(now+(type==='fever'?.34:.16));
+    }catch(e){}
+  }
+
+  document.querySelectorAll('.mode').forEach(m=>m.addEventListener('click',()=>setMode(m.dataset.mode)));
+  $('startBtn').addEventListener('click',()=>startGame()); $('dailyBtn').addEventListener('click',()=>startGame(null,false,true));
+  $('shopBtn').addEventListener('click',()=>{renderShop();show('shop');}); $('dexBtn').addEventListener('click',()=>{renderDex();show('dex');}); $('shopBackBtn').addEventListener('click',()=>show('home')); $('dexBackBtn').addEventListener('click',()=>show('home'));
+  $('retryBtn').addEventListener('click',()=>startGame()); $('backBtn').addEventListener('click',()=>show('home'));
+  $('reviewWrongBtn').addEventListener('click',()=>{ if(state.wrongDeck.length) startGame(state.wrongDeck,true,false); });
+  $('submitBtn').addEventListener('click',()=>submitAnswer(false)); $('skipBtn').addEventListener('click',()=>submitAnswer(true)); $('hintBtn').addEventListener('click',useHint);
+  el.input.addEventListener('keydown',e=>{ if(e.key==='Enter') submitAnswer(false); });
+  $('homeBtn').addEventListener('click',()=>{ clearInterval(state.timer); state.timer=null; show('home'); });
+  $('pauseBtn').addEventListener('click',()=>{ state.paused=!state.paused; $('pauseBtn').textContent=state.paused?'再開':'一時停止'; if(hintAvailable()){ el.smallHint.textContent=state.paused?'一時停止中':'ヒントボタンで1文字ずつ表示できます'; } syncHintVisibility(); if(!state.paused) setTimeout(()=>el.input.focus(),50); });
+  el.playCard.addEventListener('pointermove',e=>{ const r=el.playCard.getBoundingClientRect(); el.playCard.style.setProperty('--mx',`${((e.clientX-r.left)/r.width)*100}%`); el.playCard.style.setProperty('--my',`${((e.clientY-r.top)/r.height)*100}%`); });
+
+  applyCosmetics(); updateHome();
+})();
+</script>
+</body>
+</html>
