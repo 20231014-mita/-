@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>ワホー！ほうほうタイピング ULTRA</title>
+<title>ワホー！ほうほうタイピング ULTRA UI Plus</title>
 <style>
 :root{
   --bg:#07111f;--panel:rgba(15,23,42,.92);--panel2:rgba(30,41,59,.96);--line:rgba(255,255,255,.14);
@@ -62,6 +62,47 @@ button{user-select:none}
   .topbar{grid-template-columns:repeat(2,minmax(0,1fr))}.stat b{font-size:17px}.bottomRow .btn{font-size:14px;padding:12px 6px}.homeStats{grid-template-columns:1fr 1fr}.mode{min-height:82px}.question{font-size:23px}.answerInput{font-size:28px}
 }
 
+/* ===== UI PLUS：プレイしやすさ・スキップ強調 ===== */
+#game.screen.active{grid-template-rows:auto auto auto minmax(0,1fr) auto;padding-bottom:max(12px,env(safe-area-inset-bottom));}
+.topbar{grid-template-columns:repeat(4,minmax(110px,1fr));}
+.topbar .stat{box-shadow:0 10px 26px rgba(0,0,0,.16);}
+.topbar .stat small{font-size:11px;color:#cbd5e1;}
+.topbar .stat b{font-size:clamp(18px,2.7vw,24px);}
+.playCard{display:flex;flex-direction:column;gap:8px;}
+.qLabel{display:inline-flex;align-items:center;justify-content:center;width:max-content;margin:0 auto 2px;padding:6px 12px;border:1px solid rgba(125,211,252,.25);border-radius:999px;background:rgba(56,189,248,.10);}
+.question{margin:4px 0 2px;line-height:1.35;}
+.inputPanel{position:relative;width:min(720px,100%);margin:14px auto 6px;padding:14px;border:1px solid rgba(255,255,255,.12);border-radius:26px;background:rgba(2,6,23,.42);box-shadow:inset 0 0 32px rgba(0,0,0,.18);}
+.inputLabel{display:block;text-align:left;color:#cbd5e1;font-size:12px;font-weight:1000;letter-spacing:.08em;margin:0 0 8px 4px;}
+.inputPanel .answerInput{width:100%;margin:0 0 12px;border-width:3px;background:rgba(0,0,0,.32);}
+.actionRow{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(150px,.9fr);gap:10px;}
+.answerBtn{min-height:62px;font-size:20px;border-radius:20px;background:linear-gradient(135deg,#22c55e,#38bdf8);box-shadow:0 16px 40px rgba(34,197,94,.16);}
+.skipBtn{min-height:62px;border-radius:20px;background:linear-gradient(135deg,#facc15,#f97316);box-shadow:0 16px 42px rgba(250,204,21,.24);color:#111827;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;align-items:center;column-gap:8px;padding:10px 14px;text-align:left;}
+.skipBtn span{grid-row:1/3;font-size:24px;line-height:1;}
+.skipBtn b{font-size:17px;line-height:1.05;}
+.skipBtn small{font-size:12px;font-weight:1000;opacity:.78;line-height:1.1;}
+.skipBtn:disabled{background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);box-shadow:none;border:1px solid rgba(255,255,255,.12);}
+.bottomRow{grid-template-columns:repeat(3,minmax(120px,1fr));}
+.bottomRow .btn{background:rgba(255,255,255,.085);border:1px solid rgba(255,255,255,.14);}
+.feedback{padding:0 8px;line-height:1.35;}
+.answerGuide .kanaChip:last-child{background:rgba(250,204,21,.14);border-color:rgba(250,204,21,.34);color:#fef3c7;}
+@media(max-width:880px){
+  #game.screen.active{grid-template-rows:auto auto auto 1fr auto;gap:7px;}
+  .topbar{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .topbar .stat{padding:9px 6px;border-radius:15px;}
+  .inputPanel{padding:12px;border-radius:22px;margin-top:10px;}
+  .actionRow{grid-template-columns:1fr;gap:8px;}
+  .answerBtn,.skipBtn{min-height:54px;}
+  .skipBtn{grid-template-columns:auto 1fr;justify-content:center;}
+  .bottomRow{grid-template-columns:repeat(3,1fr);gap:7px;}
+}
+@media(max-width:430px){
+  .topbar{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .topbar .stat small{font-size:10px}.topbar .stat b{font-size:18px;}
+  .question{font-size:22px;padding:14px 10px;}
+  .answerInput{font-size:26px;padding:14px 12px;}
+  .bottomRow .btn{font-size:13px;min-height:46px;}
+}
+
 </style>
 </head>
 <body class="theme-neon">
@@ -117,9 +158,13 @@ button{user-select:none}
         <div class="question" id="question">セイキンといえば？</div>
         <div class="hint" id="hint">ヨ□□</div>
         <div class="smallHint" id="smallHint">かんたんモードだけヒントを使えます</div>
-        <div class="inputRow">
-          <input id="answerInput" class="answerInput" type="text" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="カタカナ・漢字で入力" />
-          <button class="btn" id="submitBtn">回答</button>
+        <div class="inputPanel">
+          <label class="inputLabel" for="answerInput">答えを入力</label>
+          <input id="answerInput" class="answerInput" type="text" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="例：マホウ / 魔法" />
+          <div class="actionRow">
+            <button class="btn answerBtn" id="submitBtn">回答する</button>
+            <button class="btn skipBtn" id="skipBtn"><span>⏭</span><b>スキップ</b><small>残り2回</small></button>
+          </div>
         </div>
         <div class="feedback" id="feedback"></div>
         <div class="comboFlash" id="comboFlash">2コンボ！</div>
@@ -127,13 +172,12 @@ button{user-select:none}
           <span class="kanaChip">ゲージ満タンでフィーバー</span>
           <span class="kanaChip">レア・ボス問題は高得点</span>
           <span class="kanaChip">漢字・ひらがなもOK</span>
-          <span class="kanaChip">スキップは1マッチ2回まで</span>
+          <span class="kanaChip">スキップは黄色ボタン・1マッチ2回</span>
         </div>
       </div>
     </div>
     <div class="bottomRow">
       <button class="btn ghost" id="hintBtn">ヒント</button>
-      <button class="btn ghost" id="skipBtn">スキップ 2/2</button>
       <button class="btn ghost" id="pauseBtn">一時停止</button>
       <button class="btn ghost" id="homeBtn">ホームへ</button>
     </div>
@@ -329,7 +373,8 @@ button{user-select:none}
     if(state.totalTime===0){ el.timeBar.style.width='100%'; } else { el.timeBar.style.width=`${Math.max(0,(state.timeLeft/state.totalTime)*100)}%`; }
     el.gaugeBar.style.width=`${Math.min(100,state.gauge)}%`; el.gaugeText.textContent=`${Math.floor(Math.min(100,state.gauge))}%`;
     if(el.skipBtn){
-      el.skipBtn.textContent=`スキップ ${state.skipsLeft}/2`;
+      const label = state.skipsLeft > 0 ? `残り${state.skipsLeft}回` : '使用済み';
+      el.skipBtn.innerHTML = `<span>⏭</span><b>スキップ</b><small>${label}</small>`;
       el.skipBtn.disabled = state.locked || state.paused || state.gameFinished || state.skipsLeft<=0;
     }
   }
@@ -377,14 +422,14 @@ button{user-select:none}
     const item=state.current; const typedRaw=el.input.value; const typed=normalizeKana(typedRaw);
     if(skip){
       if(state.skipsLeft<=0){
-        el.feedback.textContent='スキップは1マッチ2回までです！';
+        el.feedback.textContent='スキップはもう使えません！';
         showComboFlash('スキップ残り0回');
         return;
       }
       state.locked=true; el.input.disabled=true; el.hintBtn.disabled=true; el.skipBtn.disabled=true;
       state.skipsLeft--; state.skipped++; state.combo=0;
       state.review.push({clue:item.clue,kanji:item.kanji,answer:item.kana[0],chosen:'スキップ',ok:false,partial:0,skipped:true,rare:state.isRare,boss:state.isBoss});
-      el.feedback.textContent=`スキップしました。残り${state.skipsLeft}回`;
+      el.feedback.textContent=`スキップしました。残り${state.skipsLeft}回使えます`;
       showComboFlash(`スキップ 残り${state.skipsLeft}回`);
       playSound('hint');
       state.index++; updateHud();
