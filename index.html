@@ -127,12 +127,13 @@ button{user-select:none}
           <span class="kanaChip">ゲージ満タンでフィーバー</span>
           <span class="kanaChip">レア・ボス問題は高得点</span>
           <span class="kanaChip">漢字・ひらがなもOK</span>
+          <span class="kanaChip">スキップは1マッチ2回まで</span>
         </div>
       </div>
     </div>
     <div class="bottomRow">
       <button class="btn ghost" id="hintBtn">ヒント</button>
-      <button class="btn ghost" id="skipBtn">パス</button>
+      <button class="btn ghost" id="skipBtn">スキップ 2/2</button>
       <button class="btn ghost" id="pauseBtn">一時停止</button>
       <button class="btn ghost" id="homeBtn">ホームへ</button>
     </div>
@@ -189,7 +190,7 @@ button{user-select:none}
     { clue:'2月に食べる巻き寿司', hardClue:'節分で向く方角にも関係する言葉', kanji:'恵方', kana:['エホウ'] },
     { clue:'先祖代々伝わる宝物', hardClue:'家に代々伝わる大切な宝', kanji:'家宝', kana:['カホウ'] },
     { clue:'プレパラートに入った泡', hardClue:'水や液体の中の小さな空気の泡', kanji:'気泡', kana:['キホウ'] },
-    { clue:'ダースベイダーの呼吸音といえば？', hardClue:'低い呼吸音のものまね', kanji:'コーホー', kana:['コーホー','コーホウ'] },
+    { clue:'ダースベイダーの呼吸音といえば？', hardClue:'ダースベイダーの呼吸音は？', kanji:'コーホー', kana:['コーホー','コーホウ'] },
     { clue:'お茶を立てる時のマナー', hardClue:'礼儀や動きの決まったやり方', kanji:'作法', kana:['サホウ'] },
     { clue:'裁判所に関係するしくみ', hardClue:'裁判で法律を使う国家の働き', kanji:'司法', kana:['シホウ'] },
     { clue:'日本のエリア分けの代表的なやり方', hardClue:'関東・関西・東北などの区分', kanji:'地方', kana:['チホウ'] },
@@ -236,11 +237,11 @@ button{user-select:none}
   const el = {
     question:$('question'), hint:$('hint'), smallHint:$('smallHint'), input:$('answerInput'), feedback:$('feedback'),
     score:$('score'), combo:$('combo'), time:$('time'), qCount:$('qCount'), partialCount:$('partialCount'), rank:$('rank'), life:$('life'), feverTime:$('feverTime'),
-    timeBar:$('timeBar'), gaugeBar:$('gaugeBar'), gaugeText:$('gaugeText'), playCard:$('playCard'), comboFlash:$('comboFlash'), hintBtn:$('hintBtn'), tagLine:$('tagLine')
+    timeBar:$('timeBar'), gaugeBar:$('gaugeBar'), gaugeText:$('gaugeText'), playCard:$('playCard'), comboFlash:$('comboFlash'), hintBtn:$('hintBtn'), skipBtn:$('skipBtn'), tagLine:$('tagLine')
   };
 
   const state = {
-    mode:'easy', deck:[], index:0, score:0, combo:0, maxCombo:0, correct:0, partial:0, wrong:0,
+    mode:'easy', deck:[], index:0, score:0, combo:0, maxCombo:0, correct:0, partial:0, wrong:0, skipped:0, skipsLeft:2,
     totalTime:0, timeLeft:0, elapsed:0, timer:null, paused:false, locked:false, review:[], current:null,
     hintLevel:0, hintsUsed:0, noHintCorrect:0, wrongDeck:[], reviewMode:false, dailyMode:false,
     life:3, gauge:0, feverLeft:0, feverActive:false, isRare:false, isBoss:false, survivalCount:0, gameFinished:false
@@ -293,7 +294,7 @@ button{user-select:none}
   function startGame(deck=null, reviewMode=false, dailyMode=false){
     const source = deck && deck.length ? deck : dailyMode ? [dailyQuestion()] : DATA;
     state.deck = state.mode === 'survival' && !dailyMode && !reviewMode ? shuffle(source) : shuffle(source);
-    state.index=0; state.score=0; state.combo=0; state.maxCombo=0; state.correct=0; state.partial=0; state.wrong=0;
+    state.index=0; state.score=0; state.combo=0; state.maxCombo=0; state.correct=0; state.partial=0; state.wrong=0; state.skipped=0; state.skipsLeft=2; state.noHintCorrect=0;
     state.review=[]; state.wrongDeck=[]; state.reviewMode=reviewMode; state.dailyMode=dailyMode; state.elapsed=0;
     state.totalTime = dailyMode || reviewMode || state.mode==='easy' || state.mode==='time' || state.mode==='survival' ? 0 : state.mode==='hard' ? 60 : 90;
     state.timeLeft=state.totalTime; state.paused=false; state.locked=false; state.life = state.mode==='survival' ? 1 : 3; state.gauge=0; state.feverLeft=0; state.feverActive=false; state.survivalCount=0; state.gameFinished=false;
@@ -327,6 +328,10 @@ button{user-select:none}
     el.partialCount.textContent=state.partial; el.feverTime.textContent=state.feverActive ? `${Math.ceil(state.feverLeft)}s` : 'OFF';
     if(state.totalTime===0){ el.timeBar.style.width='100%'; } else { el.timeBar.style.width=`${Math.max(0,(state.timeLeft/state.totalTime)*100)}%`; }
     el.gaugeBar.style.width=`${Math.min(100,state.gauge)}%`; el.gaugeText.textContent=`${Math.floor(Math.min(100,state.gauge))}%`;
+    if(el.skipBtn){
+      el.skipBtn.textContent=`スキップ ${state.skipsLeft}/2`;
+      el.skipBtn.disabled = state.locked || state.paused || state.gameFinished || state.skipsLeft<=0;
+    }
   }
 
   function nextQuestion(){
@@ -370,13 +375,29 @@ button{user-select:none}
   function submitAnswer(skip=false){
     if(state.locked||state.paused||state.gameFinished) return;
     const item=state.current; const typedRaw=el.input.value; const typed=normalizeKana(typedRaw);
-    if(!skip&&!typed){ el.input.classList.add('ng'); el.feedback.textContent='カタカナか漢字で入力してね！'; setTimeout(()=>el.input.classList.remove('ng'),360); return; }
-    state.locked=true; el.input.disabled=true; el.hintBtn.disabled=true;
-    const ok=!skip&&isCorrectAnswer(typedRaw,item); const pScore=ok||skip?0:partialScore(typedRaw,item); const correctText=item.kana[0];
+    if(skip){
+      if(state.skipsLeft<=0){
+        el.feedback.textContent='スキップは1マッチ2回までです！';
+        showComboFlash('スキップ残り0回');
+        return;
+      }
+      state.locked=true; el.input.disabled=true; el.hintBtn.disabled=true; el.skipBtn.disabled=true;
+      state.skipsLeft--; state.skipped++; state.combo=0;
+      state.review.push({clue:item.clue,kanji:item.kanji,answer:item.kana[0],chosen:'スキップ',ok:false,partial:0,skipped:true,rare:state.isRare,boss:state.isBoss});
+      el.feedback.textContent=`スキップしました。残り${state.skipsLeft}回`;
+      showComboFlash(`スキップ 残り${state.skipsLeft}回`);
+      playSound('hint');
+      state.index++; updateHud();
+      setTimeout(nextQuestion,650);
+      return;
+    }
+    if(!typed){ el.input.classList.add('ng'); el.feedback.textContent='カタカナか漢字で入力してね！'; setTimeout(()=>el.input.classList.remove('ng'),360); return; }
+    state.locked=true; el.input.disabled=true; el.hintBtn.disabled=true; el.skipBtn.disabled=true;
+    const ok=isCorrectAnswer(typedRaw,item); const pScore=ok?0:partialScore(typedRaw,item); const correctText=item.kana[0];
     if(ok){ handleCorrect(item); }
     else if(pScore>0){ handlePartial(item,pScore,typedRaw); }
     else { handleWrong(item,typedRaw,skip); }
-    state.review.push({clue:item.clue,kanji:item.kanji,answer:correctText,chosen:skip?'パス':(typed||'未入力'),ok,partial:pScore,rare:state.isRare,boss:state.isBoss});
+    state.review.push({clue:item.clue,kanji:item.kanji,answer:correctText,chosen:(typed||'未入力'),ok,partial:pScore,rare:state.isRare,boss:state.isBoss});
     if(state.mode==='survival') state.survivalCount = state.correct;
     state.index++; updateHud();
     const delay = ok ? 720 : pScore>0 ? 1050 : 1150;
@@ -421,7 +442,7 @@ button{user-select:none}
     if(state.correct>=15 && state.elapsed<=60) completeMission('fast15');
     const earned = Math.max(0, Math.floor(state.score/18) + state.correct*2 + (state.dailyMode&&state.correct?80:0));
     save.coins=(save.coins||0)+earned; save.best=Math.max(save.best||0,state.score); persist();
-    $('rScore').textContent=state.score; $('rCorrect').textContent=`${state.correct}/${state.correct+state.partial+state.wrong}`; $('rPartial').textContent=state.partial; $('rCombo').textContent=state.maxCombo; $('rCoins').textContent=`+${earned}`;
+    $('rScore').textContent=state.score; $('rCorrect').textContent=`${state.correct}/${state.correct+state.partial+state.wrong+state.skipped}`; $('rPartial').textContent=state.partial; $('rCombo').textContent=state.maxCombo; $('rCoins').textContent=`+${earned}`;
     const rank=rankName(); $('titleBox').textContent=`ランク：${rank}　称号：${titleName()}`;
     let text = rank==='ワホー神' ? '最強！ワホー神レベル！' : rank==='S' ? 'Sランク！かなり強い！' : rank==='A' ? 'Aランク！いい感じ！' : rank==='B' ? 'Bランク！コンボを伸ばそう！' : 'Cランク！まずはヒントで覚えよう！';
     if(reason==='life') text='ライフがなくなりました。苦手問題を復習しよう！';
@@ -437,7 +458,7 @@ button{user-select:none}
   }
   function renderReview(){
     const r=$('review'); r.innerHTML=''; const lines=state.review.length?state.review.slice(-18):[{clue:'まだ記録がありません',answer:'',kanji:'',chosen:'',ok:false,partial:0}];
-    lines.forEach(x=>{ const line=document.createElement('div'); line.className='reviewLine'; const mark=x.ok?'○':x.partial?'△':'×'; const extra=(x.rare?'【レア】':'')+(x.boss?'【ボス】':''); line.textContent=`${mark}${extra} ${x.clue} → ${x.answer}${x.kanji?'（'+x.kanji+'）':''} / 入力：${x.chosen}`; r.appendChild(line); });
+    lines.forEach(x=>{ const line=document.createElement('div'); line.className='reviewLine'; const mark=x.ok?'○':x.skipped?'↷':x.partial?'△':'×'; const extra=(x.rare?'【レア】':'')+(x.boss?'【ボス】':''); line.textContent=`${mark}${extra} ${x.clue} → ${x.answer}${x.kanji?'（'+x.kanji+'）':''} / 入力：${x.chosen}`; r.appendChild(line); });
   }
 
   function renderDex(){
@@ -479,7 +500,7 @@ button{user-select:none}
   $('submitBtn').addEventListener('click',()=>submitAnswer(false)); $('skipBtn').addEventListener('click',()=>submitAnswer(true)); $('hintBtn').addEventListener('click',useHint);
   el.input.addEventListener('keydown',e=>{ if(e.key==='Enter') submitAnswer(false); });
   $('homeBtn').addEventListener('click',()=>{ clearInterval(state.timer); state.timer=null; show('home'); });
-  $('pauseBtn').addEventListener('click',()=>{ state.paused=!state.paused; $('pauseBtn').textContent=state.paused?'再開':'一時停止'; if(hintAvailable()){ el.smallHint.textContent=state.paused?'一時停止中':'ヒントボタンで1文字ずつ表示できます'; } syncHintVisibility(); if(!state.paused) setTimeout(()=>el.input.focus(),50); });
+  $('pauseBtn').addEventListener('click',()=>{ state.paused=!state.paused; $('pauseBtn').textContent=state.paused?'再開':'一時停止'; if(hintAvailable()){ el.smallHint.textContent=state.paused?'一時停止中':'ヒントボタンで1文字ずつ表示できます'; } syncHintVisibility(); updateHud(); if(!state.paused) setTimeout(()=>el.input.focus(),50); });
   el.playCard.addEventListener('pointermove',e=>{ const r=el.playCard.getBoundingClientRect(); el.playCard.style.setProperty('--mx',`${((e.clientX-r.left)/r.width)*100}%`); el.playCard.style.setProperty('--my',`${((e.clientY-r.top)/r.height)*100}%`); });
 
   applyCosmetics(); updateHome();
