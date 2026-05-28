@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>ワホー！ほうほうタイピング ULTRA UI Plus</title>
+<title>ワホー！ほうほうタイピング ULTRA SAVE</title>
 <style>
 :root{
   --bg:#07111f;--panel:rgba(15,23,42,.92);--panel2:rgba(30,41,59,.96);--line:rgba(255,255,255,.14);
@@ -117,6 +117,7 @@ button{user-select:none}
         <div class="homeStat"><small>COINS</small><b id="homeCoins">0</b></div>
         <div class="homeStat"><small>図鑑</small><b id="homeDex">0/28</b></div>
         <div class="homeStat"><small>BEST</small><b id="homeBest">0</b></div>
+        <div class="homeStat"><small>プレイ</small><b id="homeGames">0</b></div>
         <div class="homeStat"><small>今日</small><b id="todayStatus">未</b></div>
       </div>
       <div class="modeGrid">
@@ -129,11 +130,13 @@ button{user-select:none}
       <div class="missionBox" id="homeMissions"></div>
       <div class="homeButtons">
         <button class="btn full" id="startBtn">ゲームスタート</button>
+        <button class="btn full warn" id="continueBtn">前回の続き</button>
         <button class="btn full warn" id="dailyBtn">今日のワホー</button>
+        <button class="btn full ghost" id="weakBtn">保存した苦手問題を復習</button>
         <button class="btn full ghost" id="shopBtn">ショップ</button>
         <button class="btn full ghost" id="dexBtn">図鑑</button>
       </div>
-      <div class="homeNote">漢字・ひらがな・「ー」抜けもOK。<br>例：<strong>魔法</strong> / <strong>マホウ</strong> / <strong>まほう</strong> で正解。</div>
+      <div class="homeNote">ゲームデータはこのブラウザに自動保存されます。<br>漢字・ひらがな・「ー」抜けもOK。例：<strong>魔法</strong> / <strong>マホウ</strong> / <strong>まほう</strong> で正解。</div>
     </div>
   </div>
 
@@ -220,7 +223,7 @@ button{user-select:none}
     </div>
   </div>
 
-  <div class="badge">WAHOO ULTRA V9 CLEAN UI</div>
+  <div class="badge">WAHOO ULTRA V10 BROWSER SAVE</div>
 </div>
 
 <script>
@@ -293,13 +296,48 @@ button{user-select:none}
 
   const save = loadSave();
 
-  function loadSave(){
-    const defaults = { coins:0, best:0, dex:{}, owned:{'theme-neon':true,'skin-normal':true}, equippedTheme:'theme-neon', equippedInput:'skin-normal', dailyDate:'', missions:{} };
-    try{
-      return Object.assign(defaults, JSON.parse(localStorage.getItem('wahooUltraSave') || '{}'));
-    }catch(e){ return defaults; }
+  function defaultSave(){
+    return {
+      version:2,
+      coins:0,
+      best:0,
+      lastMode:'easy',
+      dex:{},
+      owned:{'theme-neon':true,'skin-normal':true},
+      equippedTheme:'theme-neon',
+      equippedInput:'skin-normal',
+      dailyDate:'',
+      missions:{},
+      stats:{plays:0,totalScore:0,totalCorrect:0,totalPartial:0,totalWrong:0,totalSkipped:0,totalCoinsEarned:0,maxCombo:0,bestRank:'C',bestTitle:'ワホー新人'},
+      bestByMode:{easy:0,normal:0,hard:0,timeBest:null,survivalBest:0},
+      wordStats:{},
+      weakWords:{},
+      lastResult:null,
+      activeMatch:null
+    };
   }
-  function persist(){ localStorage.setItem('wahooUltraSave', JSON.stringify(save)); }
+  function deepMerge(base, extra){
+    if(!extra || typeof extra !== 'object') return base;
+    Object.keys(extra).forEach(k=>{
+      if(extra[k] && typeof extra[k] === 'object' && !Array.isArray(extra[k]) && base[k] && typeof base[k] === 'object' && !Array.isArray(base[k])) deepMerge(base[k], extra[k]);
+      else base[k] = extra[k];
+    });
+    return base;
+  }
+  function loadSave(){
+    try{
+      const raw = localStorage.getItem('wahooUltraSave');
+      const data = raw ? JSON.parse(raw) : {};
+      const merged = deepMerge(defaultSave(), data);
+      merged.owned['theme-neon']=true; merged.owned['skin-normal']=true;
+      return merged;
+    }catch(e){ return defaultSave(); }
+  }
+  function persist(){ try{ localStorage.setItem('wahooUltraSave', JSON.stringify(save)); }catch(e){} }
+  function findItemByKanji(kanji){ return DATA.find(x=>x.kanji===kanji) || DAILY.find(x=>x.kanji===kanji); }
+  function deckFromKeys(keys){ return (keys||[]).map(findItemByKanji).filter(Boolean); }
+  function getWeakDeck(){ return Object.keys(save.weakWords||{}).map(findItemByKanji).filter(Boolean); }
+  function rankValue(r){ return {'C':0,'B':1,'A':2,'S':3,'ワホー神':4}[r] ?? 0; }
   function todayKey(){ const d=new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
 
   function show(name){ Object.values(screens).forEach(s => s.classList.remove('active')); screens[name].classList.add('active'); screens[name].scrollTop = 0; if(name === 'home'){ updateHome(); requestAnimationFrame(()=>{ screens.home.scrollTop = 0; }); } }
@@ -317,7 +355,7 @@ button{user-select:none}
   function syncHintVisibility(){ const ok=hintAvailable(); el.hint.classList.toggle('hintOff', !ok); el.smallHint.classList.toggle('hintOff', !ok); el.hintBtn.classList.toggle('hintOff', !ok); el.hintBtn.disabled=!ok; if(!ok){ el.hint.textContent=''; el.smallHint.textContent=''; state.hintLevel=0; state.hintsUsed=0; } }
   function rankName(score=state.score){ if(score>=3600) return 'ワホー神'; if(score>=2600) return 'S'; if(score>=1700) return 'A'; if(score>=850) return 'B'; return 'C'; }
   function titleName(){ if(state.correct>=DATA.length && !state.reviewMode && !state.dailyMode) return 'ほうほう博士'; if(state.correct>=20) return 'ワホーマスター'; if(state.correct>=5) return 'ワホー初心者'; return 'ワホー新人'; }
-  function setMode(mode){ state.mode=mode; document.querySelectorAll('.mode').forEach(m=>m.classList.toggle('selected',m.dataset.mode===mode)); }
+  function setMode(mode){ state.mode=mode; save.lastMode=mode; persist(); document.querySelectorAll('.mode').forEach(m=>m.classList.toggle('selected',m.dataset.mode===mode)); updateHome(); }
 
   function applyCosmetics(){
     document.body.className = save.equippedTheme || 'theme-neon';
@@ -330,12 +368,43 @@ button{user-select:none}
     $('homeCoins').textContent = save.coins || 0;
     $('homeDex').textContent = `${Object.keys(save.dex||{}).length}/${DATA.length}`;
     $('homeBest').textContent = save.best || 0;
+    if($('homeGames')) $('homeGames').textContent = (save.stats && save.stats.plays) || 0;
     $('todayStatus').textContent = save.dailyDate === todayKey() ? '済' : '未';
     $('dailyBtn').disabled = save.dailyDate === todayKey();
+    if($('continueBtn')){ const canContinue=!!(save.activeMatch && save.activeMatch.active); $('continueBtn').disabled=!canContinue; $('continueBtn').style.opacity=canContinue?'1':'.45'; }
+    if($('weakBtn')){ const hasWeak=getWeakDeck().length>0; $('weakBtn').disabled=!hasWeak; $('weakBtn').style.opacity=hasWeak?'1':'.45'; }
     renderMissions('homeMissions');
   }
 
+  function saveActiveMatch(){
+    if(state.gameFinished || !state.deck || !state.deck.length) return;
+    save.activeMatch = {
+      active:true, mode:state.mode, deckKeys:state.deck.map(x=>x.kanji), index:state.index, score:state.score, combo:state.combo, maxCombo:state.maxCombo, correct:state.correct, partial:state.partial, wrong:state.wrong, skipped:state.skipped, skipsLeft:state.skipsLeft,
+      totalTime:state.totalTime, timeLeft:state.timeLeft, elapsed:state.elapsed, review:state.review, wrongKeys:state.wrongDeck.map(x=>x.kanji), reviewMode:state.reviewMode, dailyMode:state.dailyMode,
+      life:state.life, gauge:state.gauge, feverLeft:state.feverLeft, feverActive:state.feverActive, survivalCount:state.survivalCount, savedAt:Date.now()
+    };
+    persist();
+  }
+  function clearActiveMatch(){ save.activeMatch=null; persist(); }
+  function resumeSavedMatch(){
+    const m=save.activeMatch;
+    if(!m || !m.active) return false;
+    const deck=deckFromKeys(m.deckKeys);
+    if(!deck.length){ clearActiveMatch(); updateHome(); return false; }
+    state.mode=m.mode || save.lastMode || 'easy';
+    document.querySelectorAll('.mode').forEach(btn=>btn.classList.toggle('selected',btn.dataset.mode===state.mode));
+    state.deck=deck; state.index=Number(m.index)||0; state.score=Number(m.score)||0; state.combo=Number(m.combo)||0; state.maxCombo=Number(m.maxCombo)||0; state.correct=Number(m.correct)||0; state.partial=Number(m.partial)||0; state.wrong=Number(m.wrong)||0; state.skipped=Number(m.skipped)||0; state.skipsLeft=Number.isFinite(Number(m.skipsLeft))?Number(m.skipsLeft):2;
+    state.totalTime=Number(m.totalTime)||0; state.timeLeft=Number(m.timeLeft)||0; state.elapsed=Number(m.elapsed)||0; state.review=Array.isArray(m.review)?m.review:[]; state.wrongDeck=deckFromKeys(m.wrongKeys); state.reviewMode=!!m.reviewMode; state.dailyMode=!!m.dailyMode;
+    state.life=Number.isFinite(Number(m.life))?Number(m.life):3; state.gauge=Number(m.gauge)||0; state.feverLeft=Number(m.feverLeft)||0; state.feverActive=!!m.feverActive; state.survivalCount=Number(m.survivalCount)||0; state.paused=false; state.locked=false; state.gameFinished=false; state.hintLevel=0; state.hintsUsed=0; state.noHintCorrect=0;
+    $('pauseBtn').textContent='一時停止';
+    $('modeLabel').textContent = state.dailyMode ? 'TODAY WAHOO' : state.reviewMode ? 'WEAK REVIEW' : state.mode==='hard' ? 'HARD QUESTION' : state.mode==='time' ? 'TIME ATTACK' : state.mode==='survival' ? 'SURVIVAL' : 'QUESTION';
+    el.timeBar.classList.toggle('noTime', state.totalTime===0);
+    show('game'); nextQuestion(); clearInterval(state.timer); state.timer=setInterval(tick,100); playSound('start'); return true;
+  }
+
   function startGame(deck=null, reviewMode=false, dailyMode=false){
+    clearActiveMatch();
+    save.lastMode=state.mode; persist();
     const source = deck && deck.length ? deck : dailyMode ? [dailyQuestion()] : DATA;
     state.deck = state.mode === 'survival' && !dailyMode && !reviewMode ? shuffle(source) : shuffle(source);
     state.index=0; state.score=0; state.combo=0; state.maxCombo=0; state.correct=0; state.partial=0; state.wrong=0; state.skipped=0; state.skipsLeft=2; state.noHintCorrect=0;
@@ -361,6 +430,7 @@ button{user-select:none}
       state.feverLeft -= 0.1;
       if(state.feverLeft<=0){ state.feverLeft=0; state.feverActive=false; el.playCard.classList.remove('fever'); }
     }
+    if(Math.floor(state.elapsed*10)%10===0) saveActiveMatch();
     updateHud();
   }
 
@@ -397,7 +467,7 @@ button{user-select:none}
       el.hint.textContent = visibleHint(item);
       el.smallHint.textContent = state.hintLevel ? '最初の1文字ヒント表示中' : 'ヒントボタンで1文字ずつ表示できます';
     }
-    syncHintVisibility(); updateHud(); setTimeout(()=>el.input.focus(),60);
+    syncHintVisibility(); updateHud(); saveActiveMatch(); setTimeout(()=>el.input.focus(),60);
   }
 
   function renderTags(){
@@ -417,6 +487,16 @@ button{user-select:none}
     state.score=Math.max(0,state.score-10); updateHud(); if(state.hintLevel>=len) el.hintBtn.disabled=true; playSound('hint');
   }
 
+  function recordWordResult(item, result){
+    if(!item || !item.kanji) return;
+    save.wordStats=save.wordStats||{}; save.weakWords=save.weakWords||{};
+    const st=save.wordStats[item.kanji] || {seen:0,correct:0,partial:0,wrong:0,skipped:0};
+    st.seen++; st[result]=(st[result]||0)+1; save.wordStats[item.kanji]=st;
+    if(result==='correct'){ if((st.wrong||0)+(st.partial||0)+(st.skipped||0) <= (st.correct||0)) delete save.weakWords[item.kanji]; }
+    else { save.weakWords[item.kanji]=true; }
+    persist();
+  }
+
   function submitAnswer(skip=false){
     if(state.locked||state.paused||state.gameFinished) return;
     const item=state.current; const typedRaw=el.input.value; const typed=normalizeKana(typedRaw);
@@ -427,24 +507,24 @@ button{user-select:none}
         return;
       }
       state.locked=true; el.input.disabled=true; el.hintBtn.disabled=true; el.skipBtn.disabled=true;
-      state.skipsLeft--; state.skipped++; state.combo=0;
+      state.skipsLeft--; state.skipped++; state.combo=0; recordWordResult(item,'skipped');
       state.review.push({clue:item.clue,kanji:item.kanji,answer:item.kana[0],chosen:'スキップ',ok:false,partial:0,skipped:true,rare:state.isRare,boss:state.isBoss});
       el.feedback.textContent=`スキップしました。残り${state.skipsLeft}回使えます`;
       showComboFlash(`スキップ 残り${state.skipsLeft}回`);
       playSound('hint');
-      state.index++; updateHud();
+      state.index++; updateHud(); saveActiveMatch();
       setTimeout(nextQuestion,650);
       return;
     }
     if(!typed){ el.input.classList.add('ng'); el.feedback.textContent='カタカナか漢字で入力してね！'; setTimeout(()=>el.input.classList.remove('ng'),360); return; }
     state.locked=true; el.input.disabled=true; el.hintBtn.disabled=true; el.skipBtn.disabled=true;
     const ok=isCorrectAnswer(typedRaw,item); const pScore=ok?0:partialScore(typedRaw,item); const correctText=item.kana[0];
-    if(ok){ handleCorrect(item); }
-    else if(pScore>0){ handlePartial(item,pScore,typedRaw); }
-    else { handleWrong(item,typedRaw,skip); }
+    if(ok){ handleCorrect(item); recordWordResult(item,'correct'); }
+    else if(pScore>0){ handlePartial(item,pScore,typedRaw); recordWordResult(item,'partial'); }
+    else { handleWrong(item,typedRaw,skip); recordWordResult(item,'wrong'); }
     state.review.push({clue:item.clue,kanji:item.kanji,answer:correctText,chosen:(typed||'未入力'),ok,partial:pScore,rare:state.isRare,boss:state.isBoss});
     if(state.mode==='survival') state.survivalCount = state.correct;
-    state.index++; updateHud();
+    state.index++; updateHud(); saveActiveMatch();
     const delay = ok ? 720 : pScore>0 ? 1050 : 1150;
     if(state.life<=0 || (state.mode==='survival' && !ok && pScore<=0)){ setTimeout(()=>finishGame('life'),700); }
     else setTimeout(nextQuestion,delay);
@@ -456,7 +536,7 @@ button{user-select:none}
     if(state.mode==='hard'&&!state.reviewMode) add+=40; if(state.isBoss) add+=250; if(state.isRare) add*=3; if(state.feverActive) add*=2; if(state.dailyMode) add+=500;
     add=Math.max(40, add - state.hintLevel*8); state.score+=add; state.gauge += state.isBoss ? 40 : state.isRare ? 35 : 22;
     if(state.gauge>=100) triggerFever();
-    save.dex[item.kanji]=true;
+    save.dex[item.kanji]=true; persist();
     el.input.classList.add('ok'); el.feedback.textContent = state.feverActive ? `ワホー！正解！ +${add} ×2中` : `ワホー！正解！ +${add}`;
     if(state.combo>=2) showComboFlash(`${state.combo}コンボ！ ほうほう！`);
     if(state.combo>=5) completeMission('combo5');
@@ -483,12 +563,19 @@ button{user-select:none}
 
   function finishGame(reason='end'){
     if(state.gameFinished) return; state.gameFinished=true; clearInterval(state.timer); state.timer=null; el.input.blur();
+    clearActiveMatch();
     if(state.dailyMode && state.correct>0) save.dailyDate=todayKey();
     if(state.correct>=15 && state.elapsed<=60) completeMission('fast15');
     const earned = Math.max(0, Math.floor(state.score/18) + state.correct*2 + (state.dailyMode&&state.correct?80:0));
-    save.coins=(save.coins||0)+earned; save.best=Math.max(save.best||0,state.score); persist();
+    const rankNow = rankName(); const titleNow = titleName();
+    save.coins=(save.coins||0)+earned; save.best=Math.max(save.best||0,state.score);
+    save.stats=save.stats||{}; save.stats.plays=(save.stats.plays||0)+1; save.stats.totalScore=(save.stats.totalScore||0)+state.score; save.stats.totalCorrect=(save.stats.totalCorrect||0)+state.correct; save.stats.totalPartial=(save.stats.totalPartial||0)+state.partial; save.stats.totalWrong=(save.stats.totalWrong||0)+state.wrong; save.stats.totalSkipped=(save.stats.totalSkipped||0)+state.skipped; save.stats.totalCoinsEarned=(save.stats.totalCoinsEarned||0)+earned; save.stats.maxCombo=Math.max(save.stats.maxCombo||0,state.maxCombo);
+    if(rankValue(rankNow) > rankValue(save.stats.bestRank||'C')) save.stats.bestRank=rankNow; save.stats.bestTitle=titleNow;
+    save.bestByMode=save.bestByMode||{}; if(!state.dailyMode && !state.reviewMode){ if(['easy','normal','hard'].includes(state.mode)) save.bestByMode[state.mode]=Math.max(save.bestByMode[state.mode]||0,state.score); if(state.mode==='time' && reason==='clear') save.bestByMode.timeBest = save.bestByMode.timeBest==null ? Math.floor(state.elapsed) : Math.min(save.bestByMode.timeBest, Math.floor(state.elapsed)); if(state.mode==='survival') save.bestByMode.survivalBest=Math.max(save.bestByMode.survivalBest||0,state.correct); }
+    save.lastResult={date:new Date().toISOString(),mode:state.mode,score:state.score,correct:state.correct,partial:state.partial,wrong:state.wrong,skipped:state.skipped,maxCombo:state.maxCombo,rank:rankNow,title:titleNow,earned};
+    persist();
     $('rScore').textContent=state.score; $('rCorrect').textContent=`${state.correct}/${state.correct+state.partial+state.wrong+state.skipped}`; $('rPartial').textContent=state.partial; $('rCombo').textContent=state.maxCombo; $('rCoins').textContent=`+${earned}`;
-    const rank=rankName(); $('titleBox').textContent=`ランク：${rank}　称号：${titleName()}`;
+    const rank=rankNow; $('titleBox').textContent=`ランク：${rank}　称号：${titleNow}`;
     let text = rank==='ワホー神' ? '最強！ワホー神レベル！' : rank==='S' ? 'Sランク！かなり強い！' : rank==='A' ? 'Aランク！いい感じ！' : rank==='B' ? 'Bランク！コンボを伸ばそう！' : 'Cランク！まずはヒントで覚えよう！';
     if(reason==='life') text='ライフがなくなりました。苦手問題を復習しよう！';
     if(state.mode==='time' && reason==='clear') text=`タイムアタック完走：${Math.floor(state.elapsed)}秒！`;
@@ -508,7 +595,7 @@ button{user-select:none}
 
   function renderDex(){
     const list=$('dexList'); list.innerHTML='';
-    DATA.forEach((item,i)=>{ const unlocked=!!(save.dex&&save.dex[item.kanji]); const d=document.createElement('div'); d.className='tile'+(unlocked?'':' locked'); d.innerHTML=unlocked?`<b>${item.kanji}</b><small>${item.kana[0]}</small><small>${item.clue}</small>`:`<b>？？？</b><small>${i+1}番の言葉</small><small>正解すると登録</small>`; list.appendChild(d); });
+    DATA.forEach((item,i)=>{ const unlocked=!!(save.dex&&save.dex[item.kanji]); const st=(save.wordStats&&save.wordStats[item.kanji])||{}; const d=document.createElement('div'); d.className='tile'+(unlocked?'':' locked'); d.innerHTML=unlocked?`<b>${item.kanji}</b><small>${item.kana[0]}</small><small>${item.clue}</small><small>正解 ${st.correct||0} / 苦手 ${(st.wrong||0)+(st.partial||0)+(st.skipped||0)}</small>`:`<b>？？？</b><small>${i+1}番の言葉</small><small>正解すると登録</small>`; list.appendChild(d); });
   }
 
   function renderShop(){
@@ -538,16 +625,18 @@ button{user-select:none}
   }
 
   document.querySelectorAll('.mode').forEach(m=>m.addEventListener('click',()=>setMode(m.dataset.mode)));
-  $('startBtn').addEventListener('click',()=>startGame()); $('dailyBtn').addEventListener('click',()=>startGame(null,false,true));
+  $('startBtn').addEventListener('click',()=>startGame()); $('continueBtn').addEventListener('click',()=>resumeSavedMatch()); $('dailyBtn').addEventListener('click',()=>startGame(null,false,true)); $('weakBtn').addEventListener('click',()=>{ const weak=getWeakDeck(); if(weak.length) startGame(weak,true,false); });
   $('shopBtn').addEventListener('click',()=>{renderShop();show('shop');}); $('dexBtn').addEventListener('click',()=>{renderDex();show('dex');}); $('shopBackBtn').addEventListener('click',()=>show('home')); $('dexBackBtn').addEventListener('click',()=>show('home'));
   $('retryBtn').addEventListener('click',()=>startGame()); $('backBtn').addEventListener('click',()=>show('home'));
   $('reviewWrongBtn').addEventListener('click',()=>{ if(state.wrongDeck.length) startGame(state.wrongDeck,true,false); });
   $('submitBtn').addEventListener('click',()=>submitAnswer(false)); $('skipBtn').addEventListener('click',()=>submitAnswer(true)); $('hintBtn').addEventListener('click',useHint);
   el.input.addEventListener('keydown',e=>{ if(e.key==='Enter') submitAnswer(false); });
-  $('homeBtn').addEventListener('click',()=>{ clearInterval(state.timer); state.timer=null; show('home'); });
+  $('homeBtn').addEventListener('click',()=>{ saveActiveMatch(); clearInterval(state.timer); state.timer=null; show('home'); });
   $('pauseBtn').addEventListener('click',()=>{ state.paused=!state.paused; $('pauseBtn').textContent=state.paused?'再開':'一時停止'; if(hintAvailable()){ el.smallHint.textContent=state.paused?'一時停止中':'ヒントボタンで1文字ずつ表示できます'; } syncHintVisibility(); updateHud(); if(!state.paused) setTimeout(()=>el.input.focus(),50); });
   el.playCard.addEventListener('pointermove',e=>{ const r=el.playCard.getBoundingClientRect(); el.playCard.style.setProperty('--mx',`${((e.clientX-r.left)/r.width)*100}%`); el.playCard.style.setProperty('--my',`${((e.clientY-r.top)/r.height)*100}%`); });
 
+  window.addEventListener('beforeunload',()=>saveActiveMatch());
+  setMode(save.lastMode || 'easy');
   applyCosmetics(); updateHome();
 })();
 </script>
